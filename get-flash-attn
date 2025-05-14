@@ -23,7 +23,7 @@ echo "importing torch to parse config. could take a min..."
 torch_config=`$PYTHON_CMD -c "import torch; print(torch.__config__.show())"` ||{
         echo "Error. could not import torch config. maybe torch can't be found? Have you activated your python evironment?"
         echo "exiting..."
-        exit 1
+        exit 0
 }
 
 # cut off everything up to and inc "CUDA_VERSION="      -> 12.4,CUDNN_VERSION=...
@@ -51,7 +51,7 @@ fi
 ABI=`echo ${torch_config#*ABI=} | awk '{print substr ($0, 0, 1)}'`  # 0 or 1
 if [[ ! $ABI -eq 0 ]] && [[ ! $ABI -eq 1 ]]; then
         "Error! ABI=$ABI, only '0' or '1' is valid. exiting..."
-        exit 1
+        exit 0
 fi
 #convert from 0/1 to TRUE/FALSE for whl name later
 if [[ $ABI -eq 0 ]]; then
@@ -84,7 +84,7 @@ fi
 if [[ $isa != "x86_64" ]]; then
         echo "Error! your ISA was detected to be '$isa'"
         echo "Prebuilt wheels for flash_attn are only available for 'x86_64'. Exiting..."
-        exit 1
+        exit 0
 fi
 
 #check if AMD gpus are on the node and exit if so.
@@ -125,7 +125,7 @@ else
         wget $url 2>&1 > /dev/null ||{
                 echo "url not found! Maybe '$flash_attn_wheel' is not a supported configuration :( "
                 echo "exiting.."
-                exit 1
+                exit 0
         }
 
 	prefix=""
