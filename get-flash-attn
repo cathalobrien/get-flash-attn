@@ -23,7 +23,7 @@ echo "importing torch to parse config. could take a min..."
 torch_config=`$PYTHON_CMD -c "import torch; print(torch.__config__.show())"` ||{
         echo "Error. could not import torch config. maybe torch can't be found? Have you activated your python evironment?"
         echo "exiting..."
-        exit 0
+        exit 1
 }
 
 # cut off everything up to and inc "CUDA_VERSION="      -> 12.4,CUDNN_VERSION=...
@@ -36,14 +36,10 @@ echo " +        cu$cuda_version"
 torch_version=`echo ${torch_config#*TORCH_VERSION=} | awk -F'.' '{print $1 "." $2 }'`
 echo " +        torch v$torch_version"
 
-# flash_attn_version '2.7.0.post2'
-# Only has wheels up to torch 2.5
-# If a newer version of torch is used, set version to 2.5 so we can find a wheel
-# If this is a problem, i will remove it
-if [ `echo $torch_version'>'2.6 | bc -l` -eq 1 ]; then
-        echo "detected torch version '$torch_version' newer then latest known wheel '2.6'"
-        echo "Will try get a v2.6 wheel"
-        torch_version="2.6"
+if [ `echo $torch_version'>'2.7 | bc -l` -eq 1 ]; then
+        echo "detected torch version '$torch_version' newer then latest known wheel '2.7'"
+        echo "Will try get a v2.7 wheel"
+        torch_version="2.7"
 fi
 
 # cut off everything up to and inc "ABI="
@@ -51,7 +47,7 @@ fi
 ABI=`echo ${torch_config#*ABI=} | awk '{print substr ($0, 0, 1)}'`  # 0 or 1
 if [[ ! $ABI -eq 0 ]] && [[ ! $ABI -eq 1 ]]; then
         "Error! ABI=$ABI, only '0' or '1' is valid. exiting..."
-        exit 0
+        exit 1
 fi
 #convert from 0/1 to TRUE/FALSE for whl name later
 if [[ $ABI -eq 0 ]]; then
@@ -84,14 +80,7 @@ fi
 if [[ $isa != "x86_64" ]]; then
         echo "Error! your ISA was detected to be '$isa'"
         echo "Prebuilt wheels for flash_attn are only available for 'x86_64'. Exiting..."
-        exit 0
-fi
-
-#check if AMD gpus are on the node and exit if so.
-if command -v rocm-smi 2>&1 >/dev/null; then
-        echo "rocm-smi detected on the PATH."
-        echo "The wheels picked up by this script do not support ROCm. exiting..."
-        exit 0
+        exit 1
 fi
 
 
@@ -105,7 +94,7 @@ if [ ! $? -eq 0 ]; then
 fi
 
 # Hardcoded - I can manually bump with new releases
-flash_attn_version="2.7.4.post1"
+flash_attn_version="2.8.0.post2"
 
 # An example wheel: flash_attn-2.7.0.post1+cu12torch2.5cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
 flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
@@ -125,7 +114,7 @@ else
         wget $url 2>&1 > /dev/null ||{
                 echo "url not found! Maybe '$flash_attn_wheel' is not a supported configuration :( "
                 echo "exiting.."
-                exit 0
+                exit 1
         }
 
 	prefix=""
@@ -133,12 +122,18 @@ else
 		prefix="uv"
 	fi
 
-        $prefix pip install $flash_attn_wheel
+        $prefix pip install --no-cache-dir --no-deps $flash_attn_wheel
         rm $flash_attn_wheel
 
         pip list | grep "flash-attn" > /dev/null &&{
                 echo "flash-attn $flash_attn_version installed"
         }
+fi
+
+if [ `echo $torch_version'>'2.6 | bc -l` -eq 1 ]; then
+	echo "\nWarning. torch version '$torch_version' is 2.7 or higher. Due to changes in how torch is built, you might need to update your GCC for flash-attn before running"
+	echo "On Atos: 'export LD_LIBRARY_PATH=/usr/local/apps/gcc/12.2.0/lib64/:\$LD_LIBRARY_PATH'"
+	echo "On Leonardo: 'module load gcc/12.2.0'"
 fi
 
 exit 0
