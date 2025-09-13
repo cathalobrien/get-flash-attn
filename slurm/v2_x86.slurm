@@ -14,8 +14,8 @@
 set -ex
 
 flash_version=2.7.4.post1
-python3_minor_version=12
-torch_version=2.8
+python3_minor_version=10
+torch_version=2.7
 cuda_version=12.6
 cxx11_abi="FALSE"
 
@@ -38,8 +38,8 @@ fi
 export CXX=g++ CC=gcc
 
 cd $TMPDIR
-
-pip install --upgrade --no-cache-dir wheel setuptools packaging ninja torch==${torch_version}.0 numpy
+export PYTHONNOUSERSITE=1 #dont look in ~/.local
+python -m pip install --upgrade --no-cache-dir wheel setuptools packaging ninja torch==${torch_version}.0 numpy
 
 if [[ ! -d flash-attention ]]; then
 git clone git@github.com:Dao-AILab/flash-attention.git

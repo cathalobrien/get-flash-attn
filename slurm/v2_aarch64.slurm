@@ -12,8 +12,8 @@
 set -ex
 
 flash_version=2.7.4.post1
-python3_minor_version=12
-torch_version=2.8
+python3_minor_version=11
+torch_version=2.6
 cuda_version=12.8
 cxx11_abi="FALSE"
 
@@ -45,16 +45,17 @@ fi
 
 cd $TMPDIR
 
-pip install --upgrade --no-cache-dir wheel setuptools packaging ninja numpy
+export PYTHONNOUSERSITE=1 #dont look in ~/.local
+python -m pip install --upgrade --no-cache-dir wheel setuptools packaging ninja numpy
 
 #older torch versions arent built against cu 126
 torch_minor_version=`echo  $torch_version | cut -d. -f2`
 if [[ "$torch_minor_version" -lt "7"  ]]; then
-pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu126
+python -m pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu126
 elif  [[ "$torch_minor_version" -lt "8"  ]]; then
-pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu128
+python -m pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu128
 else
-pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu129
+python -m pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu129
 fi
 
 if [[ ! -d flash-attention ]]; then
