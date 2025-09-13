@@ -31,14 +31,14 @@ The following command line args are supported
 ```
 For legacy reasons, the env vars 'UV', 'OFFLINE' and 'DRYRUN' can be set to '1' to set their relevant flags.
 
-### UV
+## UV
 To install into a uv env, run the script as shown
 ```bash
 ./get-flash-attn --uv
 #UV=1 ./get-flash-attn #legacy
 ```
 
-### Offline installs
+## Offline installs
 The script works for systems without internet access. It will automatically detect when internet is not available and then print the URL to the correct wheel for your syetm. The you can follow the example below to install it on your system
 
 ```bash
@@ -59,14 +59,41 @@ pip install ...whl
 ## Building wheels
 The repo includes slurm scripts to build x86 and aarch64 wheels.
 
-To see which configurations have begun:
-```
-grep -r "wheel_dir" outputs/ | awk '{print $2}' | uniq | sort
+## Displaying availible wheels
+
+To plot the wheels available from a given source you can use
+```bash
+./get-flash-attn -s naco -l | etc/show_wheel_availability.awk
 ```
 
-To see which build configurations were successful, and the wheels locations:
 ```
-grep -r "mv dist" outputs/ | awk '{print $4}' | uniq | sort
+Python 3.11 - linux_aarch64:
+Flash\Torch        2.6   2.7   2.8
+-----------------------------------
+2.7.4               0     0     0
+2.7.4.post1         0     0     0
+2.8.3               0     0     0
+
+Python 3.11 - linux_x86_64:
+Flash\Torch        2.6   2.7   2.8
+-----------------------------------
+2.7.4               1     0     0
+2.7.4.post1         0     1     1
+2.8.3               1     1     1
+
+Python 3.12 - linux_aarch64:
+Flash\Torch        2.6   2.7   2.8
+-----------------------------------
+2.7.4               1     1     1
+2.7.4.post1         1     1     0
+2.8.3               1     1     1
+
+Python 3.12 - linux\_x86\_64:
+Flash\Torch        2.6   2.7   2.8
+-----------------------------------
+2.7.4               0     0     0
+2.7.4.post1         0     0     0
+2.8.3               0     0     0
 ```
 
 ## TODO
