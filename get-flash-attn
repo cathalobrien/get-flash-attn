@@ -152,7 +152,6 @@ if [ ! $? -eq 0 ]; then
         printf "Warning! no internet detected (unable to ping 'http://google.com')\nRunning in offline mode instead\n"
         offline_flag=1
 fi
-local_path=""
 
 
 #select source, if source is all
@@ -167,6 +166,7 @@ printf " +        source '$wheel_source'\n"
 fi
 
 
+local_path=""
 if [[ $wheel_source == "naco" ]]; then
 #example wheel paths for x86 and aarch64
 #/perm/naco/wheelhouse/x86/flash-attention/flash-2.7.4.post1/python3.11/torch2.7.0/flash_attn-2.7.4.post1-cp311-cp311-linux_x86_64.whl
