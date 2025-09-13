@@ -57,7 +57,6 @@ python setup.py clean
 python setup.py bdist_wheel -vvvvv --dist-dir=dist
 
 mkdir -p $wheel_dir
-mv dist/*  $wheel_dir
 cuda_minor_version=${cuda_version%%.*}
 #credit to https://github.com/Dao-AILab/flash-attention/blob/e980f0f6e15ae3a7bc2a29e5610e8a9bfe25f7a6/.github/workflows/_build.yml#L178
 tmpname=cu${cuda_minor_version}torch${torch_version}cxx11abi${cxx11_abi}
