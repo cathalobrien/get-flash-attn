@@ -128,19 +128,10 @@ os="linux"
 printf " +        $os\n"
 
 # ISA
-# Only x86_64 is available
-isa="x86_64"
-printf " +        $isa\n"
-#assume 'x86' if lscpu cant be found
 if  command -v lscpu 2>&1 >/dev/null; then
         isa=`lscpu | grep "^Architecture:" | awk '{print $2}'`
 fi
-
-#if [[ $isa != "x86_64" ]]; then
-#        printf "Error! your ISA was detected to be '$isa'\nPrebuilt wheels for flash_attn are only available for 'x86_64'.\nExiting...\n"
-#        exit 0
-#fi
-
+printf " +        $isa\n"
 
 #check for internet
 # if no, just run offline mode
@@ -192,6 +183,15 @@ if [[ ${flash_attn_version} == "" ]]; then
 	#assumes newest versions are at the bottom
 	# TODO should not automatically pick v3 wheels
 	flash_attn_wheel=$(echo "$wheels" | tail -n 1)
+
+	#get the version from the wheel
+	# we need it for the tag in the case of tridao, adn to import to test the install at the end
+	tmp="${flash_attn_wheel#*flash_attn-}" # Remove prefix "flash_attn-"
+	flash_attn_version="${tmp%%+*}" # Remove suffix starting with "+"
+
+	if [[ $wheel_source == "tridao" ]]; then
+		 tag=v${flash_attn_version}
+	fi
 else
 	#trust that a valid version was given, we will find out soon enough
 	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
@@ -269,9 +269,23 @@ if [[ $wheel_source == "tridao" ]] && [ `echo $torch_version'>'2.6 | bc -l` -eq 
 	printf "On Leonardo: 	'module load gcc/12.2.0'\n"
 fi
 
-printf "\nTesting flash attention install with \"python -c 'import flash_attn'\"\n"
-python -c "import flash_attn" 2>get-flash-attn.err
+printf "\nTesting flash attention install by importing it.\n"
+flash_attn_major_version=${flash_attn_version:0:1} #first letter, either 2 or 3
+
+if [[ $flash_attn_major_version -eq 2 ]]; then
+	import_cmd="import flash_attn"
+elif [[ $flash_attn_major_version -eq 3 ]]; then
+	import_cmd="import flash_attn_interface"
+else
+	printf "Unknown python major version '$flash_attn_major_version'. Can't test installation by importing. exiting...\n"
+	exit 0
+
+fi
+
+#need the nasty double quots here because of the space in import_cmd
+python -c "'$import_cmd'" 2>get-flash-attn.err
 import_status=$? 
+
 if [[ $import_status == "0" ]]; then
 	printf "Import succeeded\n"
 else
