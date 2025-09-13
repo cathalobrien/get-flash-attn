@@ -16,6 +16,7 @@
 
 # the next hundred lines are all just parsing command line args :D
 
+wheel_source="all" # -s|--source #Where to fetch the wheels from. valid options are "all;tridao;naco". "all" will select provider dynamically based on versions
 get_wheel_flag=0 # --get-wheel # if you just want the wheel
 uv_flag=0 # --uv #if you want to install with uv
 offline_flag=0 # --offline #if you want to do an offline install (download wheel and quit)
@@ -25,7 +26,7 @@ flash_attn_version='2.7.4.post1' # -v|--flash-attn-version VERSION #version to i
 verbose_flag=0 # --verbose #to set +x
 
 #colon after for an arg
-lkey="uv offline dryrun force-reinstall flash-attn-version: verbose get-wheel"
+lkey="uv offline dryrun force-reinstall flash-attn-version: verbose get-wheel source:"
 rkey=$(echo $lkey | perl -pe 's/-//g')
 
 LONG_FLAGS=""
@@ -34,7 +35,7 @@ do
     LONG_FLAGS="$LONG_FLAGS -l $lf"
 done
 
-FLAGS="v:"
+FLAGS="v:s:"
 
 OPTS=`getopt -o $FLAGS $LONG_FLAGS -- "$@"`
 
@@ -52,6 +53,7 @@ while true
 do
     case "$1" in
     -v|--flash-attn-version) flash_attn_version=$2; shift 2;;
+    -s|--source) wheel_source=$2; shift 2;;
     --uv) uv_flag=1; shift;;
     --dryrun) dryrun_flag=1; shift;;
     --offline) offline_flag=1; shift;;
@@ -136,10 +138,11 @@ printf " +        $isa\n"
 if  command -v lscpu 2>&1 >/dev/null; then
         isa=`lscpu | grep "^Architecture:" | awk '{print $2}'`
 fi
-if [[ $isa != "x86_64" ]]; then
-        printf "Error! your ISA was detected to be '$isa'\nPrebuilt wheels for flash_attn are only available for 'x86_64'.\nExiting...\n"
-        exit 0
-fi
+
+#if [[ $isa != "x86_64" ]]; then
+#        printf "Error! your ISA was detected to be '$isa'\nPrebuilt wheels for flash_attn are only available for 'x86_64'.\nExiting...\n"
+#        exit 0
+#fi
 
 
 #check for internet
@@ -149,57 +152,101 @@ if [ ! $? -eq 0 ]; then
         printf "Warning! no internet detected (unable to ping 'http://google.com')\nRunning in offline mode instead\n"
         offline_flag=1
 fi
+local_path=""
+if [[ $wheel_source == "naco" ]]; then
+#example wheel paths for x86 and aarch64
+#/perm/naco/wheelhouse/x86/flash-attention/flash-2.7.4.post1/python3.11/torch2.7.0/flash_attn-2.7.4.post1-cp311-cp311-linux_x86_64.whl
+#/perm/naco/wheelhouse/aarch64/flash-attention/flash-2.7.4/python3.12/cuda12.8/torch2.6.0/flash_attn-2.7.4-cp312-cp312-linux_aarch64.whl
 
-# An example wheel: flash_attn-2.7.0.post1+cu12torch2.5cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
-flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
-printf " =>       $flash_attn_wheel\n"
+url=""
 
-url="https://github.com/Dao-AILab/flash-attention/releases/download/v${flash_attn_version}/$flash_attn_wheel"
-if [[ "$DRYRUN" -eq "1" ]]  || [[ $dryrun_flag -eq "1" ]] ; then
-        printf "Dryrun! Printing commands instead:\n #        wget $url\n #        pip install $flash_attn_wheel\n"
-elif [[ "$OFFLINE" -eq 1 ]] || [[ "$offline_flag" -eq 1 ]]; then
-        printf "Offline! To install flash-attn, please run 'wget ...' on a system with internet and copy it over and then run 'pip install':\n"
-        printf "          wget $url\n"
-        printf "          scp $flash_attn_wheel ...\n"
-        printf "          pip install $flash_attn_wheel\n"
+if [[ $isa == "x86_64" ]]; then
+	local_path="/perm/naco/wheelhouse/x86/flash-attention/flash-${flash_attn_version}/python3.${python_version}/torch${torch_version}.0/"
+elif [[ $isa == "aarch64" ]]; then
+	#cuda 12.8 is the cuda module the wheel was built against, not the cuda version torch is linked to
+	local_path="/perm/naco/wheelhouse/aarch64/flash-attention/flash-${flash_attn_version}/python3.${python_version}/cuda12.8/torch${torch_version}.0/"
 else
-	printf "\nDownloading $flash_attn_wheel...\n"
-        wget $quiet $url 2>&1 > /dev/null ||{
-                printf "url not found! Maybe '$flash_attn_wheel' is not a supported configuration :(\nexiting...\n"
+	printf "Unknown isa '$isa'. exiting...\n"
+	exit 0
+fi
+
+flash_attn_wheel=flash_attn-${flash_attn_version}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl
+cp $local_path/${flash_attn_wheel} .||{
+                printf "wheel not found! Maybe '$flash_attn_wheel' is not a supported configuration :(\nexiting...\n"
                 exit 0
         }
 
-	if [[ $get_wheel_flag -eq 1 ]]; then
-		printf "Wheel downloaded to $PWD/$flash_attn_wheel\n"
-		exit 0
-	fi
+elif  [[ $wheel_source == "tridao" ]]; then
 
-	prefix=""
-	#first case is legacy, 2nd case is command line arg
-	if [[ ! $UV == "" ]] || [[ $uv_flag -eq "1" ]] ; then
-		prefix="uv"
-	fi
-
-	reinstall=""
-	if [[ $force_reinstall_flag -eq 1 ]]; then
-		reinstall="--force-reinstall"
-	fi
-
-        $prefix pip install $quiet $reinstall --no-cache-dir --no-deps $flash_attn_wheel
-        rm $flash_attn_wheel
-
-        pip list | grep flash_attn > /dev/null  2>get-flash-attn.err
-	install_status=$?
-	if [[ $install_status == "0" ]]; then
-                printf "Install succeeded\n"
-	else
-                printf "Install failed. Your error is saved in 'get-flash-attn.err'\n"
-		exit 0 
-	fi
+# An example wheel: flash_attn-2.7.0.post1+cu12torch2.5cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
+url="https://github.com/Dao-AILab/flash-attention/releases/download/v${flash_attn_version}/$flash_attn_wheel"
+flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
+else
+printf "Unkown wheel source '$wheel_source'. Exiting...\n"
+exit 0
 fi
 
-if [ `echo $torch_version'>'2.6 | bc -l` -eq 1 ]; then
-	printf "\nWarning. torch version '$torch_version' is 2.7 or higher. Due to changes in how torch is built, you might need to update your GCC for flash-attn before running\n"
+printf " =>       $flash_attn_wheel\n"
+
+if [[ "$DRYRUN" -eq "1" ]]  || [[ $dryrun_flag -eq "1" ]] ; then
+        printf "\nDryrun! Printing commands instead:\n"
+	if [[ ! $url == "" ]]; then
+		printf "         wget $url\n"
+	fi
+	printf "         pip install ${local_path}$flash_attn_wheel\n"
+	exit 0
+fi
+
+if [[ "$OFFLINE" -eq 1 ]] || [[ "$offline_flag" -eq 1 ]]; then
+        printf "\nOffline! To install flash-attn, please run 'wget ...' on a system with internet and copy it over and then run 'pip install':\n"
+	if [[ ! $url == "" ]]; then
+        	printf "          wget $url\n"
+	fi
+        printf "          scp ${local_path}$flash_attn_wheel <remote>:\n"
+	printf "	  ssh <remote>\n"
+        printf "          pip install $flash_attn_wheel\n"
+	exit 0
+fi
+
+printf "\nRetrieving $flash_attn_wheel...\n"
+if [[ ! $url == "" ]]; then 
+wget $quiet $url 2>&1 > /dev/null ||{
+	printf "url not found! Maybe '$flash_attn_wheel' is not a supported configuration :(\nexiting...\n"
+	exit 0
+}
+fi
+
+if [[ $get_wheel_flag -eq 1 ]]; then
+	printf "Wheel is saved at $PWD/$flash_attn_wheel\n"
+	exit 0
+fi
+
+prefix=""
+#first case is legacy, 2nd case is command line arg
+if [[ ! $UV == "" ]] || [[ $uv_flag -eq "1" ]] ; then
+	prefix="uv"
+fi
+
+reinstall=""
+if [[ $force_reinstall_flag -eq 1 ]]; then
+	reinstall="--force-reinstall"
+fi
+printf "Installing $flash_attn_wheel...\n"
+$prefix pip install $quiet $reinstall --no-cache-dir --no-deps $flash_attn_wheel
+rm $flash_attn_wheel
+
+# [_-] because the module name is not consistent
+pip list | grep flash[_-]attn > /dev/null  2>get-flash-attn.err
+install_status=$?
+if [[ $install_status == "0" ]]; then
+	printf "Install succeeded\n"
+else
+	printf "Install failed. Your error is saved in 'get-flash-attn.err'\n"
+	exit 0 
+fi
+
+if [[ $wheel_source == "tridao" ]] && [ `echo $torch_version'>'2.6 | bc -l` -eq 1 ] ; then
+	printf "\nWarning. torch version '$torch_version' is 2.7 or higher. Due to changes in how the wheels are built, you might need to update your GCC for flash-attn before running\n"
 	printf "On Atos: 		'export LD_LIBRARY_PATH=/usr/local/apps/gcc/12.2.0/lib64/:\$LD_LIBRARY_PATH'\n"
 	printf "On Leonardo: 	'module load gcc/12.2.0'\n"
 fi
