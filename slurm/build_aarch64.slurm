@@ -11,9 +11,9 @@
 
 set -ex
 
-flash_version=2.7.4
+flash_version=2.8.3
 python3_minor_version=12
-torch_version=2.6.0
+torch_version=2.8.0
 cuda_version=12.8
 
 wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/aarch64/flash-${flash_version}/python3.${python3_minor_version}/cuda${cuda_version}/torch${torch_version}
@@ -53,10 +53,12 @@ pip install --no-cache-dir wheel setuptools packaging ninja numpy
 
 #older torch versions arent built against cu 126
 torch_minor_version=`echo  $torch_version | cut -d. -f2`
-if [[ $((torch_minor_version < 7)) ]]; then
+if [[ "$torch_minor_version" -lt "7"  ]]; then
 pip install  torch==$torch_version --index-url https://download.pytorch.org/whl/cu126
-else
+elif  [[ "$torch_minor_version" -lt "8"  ]]; then
 pip install  torch==$torch_version --index-url https://download.pytorch.org/whl/cu128
+else
+pip install  torch==$torch_version --index-url https://download.pytorch.org/whl/cu129
 fi
 
 if [[ ! -d flash-attention ]]; then

@@ -13,9 +13,9 @@
 
 set -ex
 
-flash_version=2.7.4.post1
+flash_version=2.7.4
 python3_minor_version=11
-torch_version=2.7.0
+torch_version=2.6.0
 
 wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/x86/flash-${flash_version}/python3.${python3_minor_version}/torch${torch_version}
 
