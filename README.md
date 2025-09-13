@@ -1,5 +1,7 @@
 # get-flash-attn
-A script which parses your python environment and grabs the correct flash-attention wheel from github
+A script which parses your python environment and installs the correct flash-attention wheel.
+
+tri dao et al created flash-attention, which is released under a BSD-3 license. This script retrieves and installs pre-built flash-attention wheels. 
 
 ## How to
 This script works for systems with nvidia GPUs. AMD GPUs and CPUs are not supported as the pre-built wheels are not available on the flash-attn github page.
