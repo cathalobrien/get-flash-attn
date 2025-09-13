@@ -19,7 +19,7 @@ torch_version=2.6
 cuda_version=12.6
 cxx11_abi="FALSE"
 
-wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/x86_64/
+wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/
 echo "wheel_dir=$wheel_dir"
 
 if [[ $python3_minor_version == "11" ]]; then

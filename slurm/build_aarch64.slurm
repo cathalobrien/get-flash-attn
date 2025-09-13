@@ -11,13 +11,13 @@
 
 set -ex
 
-flash_version=2.8.3
+flash_version=2.7.4.post1
 python3_minor_version=12
 torch_version=2.8
 cuda_version=12.8
 cxx11_abi="FALSE"
 
-wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/aarch64/
+wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/
 echo "wheel_dir=$wheel_dir"
 
 if [[ $python3_minor_version == "12" ]]; then
