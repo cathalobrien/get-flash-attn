@@ -153,6 +153,20 @@ if [ ! $? -eq 0 ]; then
         offline_flag=1
 fi
 local_path=""
+
+
+#select source, if source is all
+# aarch64 will go to naco
+# and any torch builds newer then 2.6.0
+if  [[ $wheel_source == "all" ]]; then
+wheel_source="tridao"
+if  [[ $isa == "aarch64" ]] || [ `echo $torch_version'>'2.6 | bc -l` -eq 1 ] ; then
+wheel_source="naco"
+fi
+printf " +        source '$wheel_source'\n"
+fi
+
+
 if [[ $wheel_source == "naco" ]]; then
 #example wheel paths for x86 and aarch64
 #/perm/naco/wheelhouse/x86/flash-attention/flash-2.7.4.post1/python3.11/torch2.7.0/flash_attn-2.7.4.post1-cp311-cp311-linux_x86_64.whl
@@ -167,6 +181,12 @@ elif [[ $isa == "aarch64" ]]; then
 	local_path="/perm/naco/wheelhouse/aarch64/flash-attention/flash-${flash_attn_version}/python3.${python_version}/cuda12.8/torch${torch_version}.0/"
 else
 	printf "Unknown isa '$isa'. exiting...\n"
+	exit 0
+fi
+
+# check if we are on atos if running with the source naco
+if [[ ! -d /perm/naco ]]; then
+	printf "Error! The path '/perm/naco' not found\nThe source 'naco' only works on Atos currently. exiting..."
 	exit 0
 fi
 
