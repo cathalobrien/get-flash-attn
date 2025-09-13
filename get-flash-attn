@@ -23,7 +23,7 @@ uv_flag=0 # --uv #if you want to install with uv
 offline_flag=0 # --offline #if you want to do an offline install (download wheel and quit)
 dryrun_flag=0 # --dryrun #if you want to dryrun
 force_reinstall_flag=0 # --force-reinstall # if you want to force reinstallation
-flash_attn_version='2.8.3' # -v|--flash-attn-version VERSION #version to install
+flash_attn_version='' # -v|--flash-attn-version VERSION #version to install, by default installs the newest
 verbose_flag=0 # --verbose #to set +x
 
 #colon after for an arg
@@ -165,20 +165,36 @@ fi
 if [[ $wheel_source == "naco" ]]; then
 
 	#Hardcode abi false, I dont have wheels with ABI true yet
-	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abiFALSE-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
+	ABI=FALSE
 	tag="v0.1-alpha"
 #https://github.com/cathalobrien/get-flash-attn/releases/download/v0.1-alpha/flash_attn-2.7.4+cu12torch2.6cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
 	repo=cathalobrien/get-flash-attn
 
 elif  [[ $wheel_source == "tridao" ]]; then
 
-	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
 	tag=v${flash_attn_version}
 	repo=Dao-AILab/flash-attention
 
 else
 printf "Unkown wheel source '$wheel_source'. Exiting...\n"
 exit 0
+fi
+
+#if a version was not given with '-v <version>'
+#try to find the newest match for your given env
+if [[ ${flash_attn_version} == "" ]]; then
+	wheels=`curl -s -L "https://api.github.com/repos/${repo}/releases" | jq -r ".[].assets[].name" | grep  "torch${torch_version}cxx11abi${ABI}-cp3${python_version}"`
+	num_wheels=$(echo "$wheels" | wc -l)
+	if [[ $num_wheels -eq 0 ]]; then
+		printf "\nError no matching wheel found for your environment\n.run './get-flash-attn -l | ./etc/show_wheel_availability.awk' to show available wheels. Exiting..."
+		exit 0
+	fi
+	#assumes newest versions are at the bottom
+	# TODO should not automatically pick v3 wheels
+	flash_attn_wheel=$(echo "$wheels" | tail -n 1)
+else
+	#trust that a valid version was given, we will find out soon enough
+	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
 fi
 
 url="https://github.com/${repo}/releases/download/$tag/$flash_attn_wheel"
@@ -213,7 +229,7 @@ fi
 printf "\nRetrieving $flash_attn_wheel...\n"
 if [[ ! $url == "" ]]; then 
 wget $quiet $url 2>&1 > /dev/null ||{
-	printf "url not found! Maybe '$flash_attn_wheel' is not a supported configuration :(\nexiting...\n"
+	printf "url not found! Maybe '$flash_attn_wheel' is not a supported configuration :(\nrun './get-flash-attn -l | ./etc/show_wheel_availability.awk' to show available wheels\nexiting...\n"
 	exit 0
 }
 fi
