@@ -15,8 +15,10 @@ flash_version=2.8.3
 python3_minor_version=12
 torch_version=2.8.0
 cuda_version=12.8
+cxx11_abi="FALSE"
 
-wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/aarch64/flash-${flash_version}/python3.${python3_minor_version}/cuda${cuda_version}/torch${torch_version}
+wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/aarch64/
+echo "wheel_dir=$wheel_dir"
 
 if [[ $python3_minor_version == "12" ]]; then
 module load  python3/3.12.9-01
@@ -72,10 +74,14 @@ export FLASH_ATTN_CUDA_ARCHS="90" #hopper
 export MAX_JOBS=2
 export NVCC_THREADS=2
 export FLASH_ATTENTION_FORCE_BUILD="TRUE"
-export FLASH_ATTENTION_FORCE_CXX11_ABI="FALSE"
+export FLASH_ATTENTION_FORCE_CXX11_ABI=$cxx11_abi
 
 python setup.py clean
 python setup.py bdist_wheel -vvvvv --dist-dir=dist
 
 mkdir -p $wheel_dir
-mv dist/*  $wheel_dir
+#credit to https://github.com/Dao-AILab/flash-attention/blob/e980f0f6e15ae3a7bc2a29e5610e8a9bfe25f7a6/.github/workflows/_build.yml#L178
+tmpname=cu${cuda_version}torch${torch_version}cxx11abi${cxx11_abi}
+wheel_name=$(ls dist/*whl | xargs -n 1 basename | sed "s/-/+$tmpname-/2")
+cp  dist/*whl $wheel_dir/$wheel_name
+echo "Wheel saved at $wheel_dir/$wheel_name"
