@@ -160,34 +160,17 @@ fi
 printf " +        source '$wheel_source'\n"
 fi
 
-
-local_path=""
 if [[ $wheel_source == "naco" ]]; then
-#example wheel path
-#/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/x86/flash_attn-2.7.4.post1+cu12.6torch2.7.0cxx11abiFalse-cp311-cp311-linux_x86_64.whl
 
-url=""
-
-local_path="/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/$isa"
-
-# check if we are on atos if running with the source naco
-if [[ ! -d /ec/res4/hpcperm/naco ]]; then
-	printf "Error! The path '/ec/res4/hpcperm/naco' not found\nThe source 'naco' only works on Atos currently. exiting..."
-	exit 0
-fi
-
-#flash_attn_wheel=flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}.0cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl # i dont have wheels with ABI true yet
-flash_attn_wheel=flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abiFALSE-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl
-cp $local_path/${flash_attn_wheel} .||{
-                printf "wheel not found! Maybe '$flash_attn_wheel' is not a supported configuration :(\nexiting...\n"
-                exit 0
-        }
+	#Hardcode abi false, I dont have wheels with ABI true yet
+	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abiFALSE-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
+	url="https://github.com/cathalobrien/get-flash-attn/releases/download/v0.1-alpha/$flash_attn_wheel"
 
 elif  [[ $wheel_source == "tridao" ]]; then
 
-# An example wheel: flash_attn-2.7.0.post1+cu12torch2.5cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
-url="https://github.com/Dao-AILab/flash-attention/releases/download/v${flash_attn_version}/$flash_attn_wheel"
-flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
+	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
+	url="https://github.com/Dao-AILab/flash-attention/releases/download/v${flash_attn_version}/$flash_attn_wheel"
+
 else
 printf "Unkown wheel source '$wheel_source'. Exiting...\n"
 exit 0
@@ -197,19 +180,15 @@ printf " =>       $flash_attn_wheel\n"
 
 if [[ "$DRYRUN" -eq "1" ]]  || [[ $dryrun_flag -eq "1" ]] ; then
         printf "\nDryrun! Printing commands instead:\n"
-	if [[ ! $url == "" ]]; then
-		printf "         wget $url\n"
-	fi
-	printf "         pip install ${local_path}$flash_attn_wheel\n"
+	printf "         wget $url\n"
+	printf "         pip install $flash_attn_wheel\n"
 	exit 0
 fi
 
 if [[ "$OFFLINE" -eq 1 ]] || [[ "$offline_flag" -eq 1 ]]; then
         printf "\nOffline! To install flash-attn, please run 'wget ...' on a system with internet and copy it over and then run 'pip install':\n"
-	if [[ ! $url == "" ]]; then
-        	printf "          wget $url\n"
-	fi
-        printf "          scp ${local_path}$flash_attn_wheel <remote>:\n"
+        printf "          wget $url\n"
+        printf "          scp $flash_attn_wheel <remote>:\n"
 	printf "	  ssh <remote>\n"
         printf "          pip install $flash_attn_wheel\n"
 	exit 0
