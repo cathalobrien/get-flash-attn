@@ -21,6 +21,7 @@ The following command line args are supported
 ```bash
 -s|--source # which provider to download the wheels from. possible values are "all;tridao;naco". "all" will dynamically select provider based on versions
 -v|--flash-attn-version $version # Which version of flash attention to install. defaults to '2.7.4.post1'
+-l|--list # lists the wheels available
 --offline # Prints instructions to install on an airgapped system e.g. MN5
 --dryrun # Dryrun. prints commands instead of running them
 --get-wheel # Downloads the wheel to your cwd and quits

@@ -18,6 +18,7 @@
 
 wheel_source="all" # -s|--source #Where to fetch the wheels from. valid options are "all;tridao;naco". "all" will select provider dynamically based on versions
 get_wheel_flag=0 # --get-wheel # if you just want the wheel
+list_wheels_flag=0 # -l|--list-wheels|--list # lists available wheels
 uv_flag=0 # --uv #if you want to install with uv
 offline_flag=0 # --offline #if you want to do an offline install (download wheel and quit)
 dryrun_flag=0 # --dryrun #if you want to dryrun
@@ -26,7 +27,7 @@ flash_attn_version='2.7.4.post1' # -v|--flash-attn-version VERSION #version to i
 verbose_flag=0 # --verbose #to set +x
 
 #colon after for an arg
-lkey="uv offline dryrun force-reinstall flash-attn-version: verbose get-wheel source:"
+lkey="uv offline dryrun force-reinstall flash-attn-version: verbose get-wheel source: list-wheels list"
 rkey=$(echo $lkey | perl -pe 's/-//g')
 
 LONG_FLAGS=""
@@ -35,7 +36,7 @@ do
     LONG_FLAGS="$LONG_FLAGS -l $lf"
 done
 
-FLAGS="v:s:"
+FLAGS="v:s:l"
 
 OPTS=`getopt -o $FLAGS $LONG_FLAGS -- "$@"`
 
@@ -59,6 +60,7 @@ do
     --offline) offline_flag=1; shift;;
     --verbose) verbose_flag=1; shift;;
     --get-wheel) get_wheel_flag=1; shift;;
+    -l|--list|--list-wheels) list_wheels_flag=1; shift;;
     --force-reinstall) force_reinstall_flag=1; shift;;
         --) shift; break;;
         *) echo "DEBUG: 1=${1:-}"; echo "DEBUG: 2=${2:-}"; abort=yes; break;;
@@ -164,16 +166,29 @@ if [[ $wheel_source == "naco" ]]; then
 
 	#Hardcode abi false, I dont have wheels with ABI true yet
 	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abiFALSE-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
-	url="https://github.com/cathalobrien/get-flash-attn/releases/download/v0.1-alpha/$flash_attn_wheel"
+	tag=latest
+	repo=cathalobrien/get-flash-attn
 
 elif  [[ $wheel_source == "tridao" ]]; then
 
 	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
-	url="https://github.com/Dao-AILab/flash-attention/releases/download/v${flash_attn_version}/$flash_attn_wheel"
+	tag=v${flash_attn_version}
+	repo=Dao-AILab/flash-attention
 
 else
 printf "Unkown wheel source '$wheel_source'. Exiting...\n"
 exit 0
+fi
+
+url="https://github.com/${repo}/releases/download/$tag/$flash_attn_wheel"
+if [[ $list_wheels_flag -eq 1 ]]; then
+	if [[ $offline_flah -eq 1 ]]; then
+		printf "\ncant list available wheels without internet. exiting..."
+		exit 0
+	fi
+	printf "\nThe following wheels are available from the source '$wheel_source':\n"
+ 	curl -s -L "https://api.github.com/repos/${repo}/releases" | jq -r '.[].assets[].name'
+	exit 0
 fi
 
 printf " =>       $flash_attn_wheel\n"
