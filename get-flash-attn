@@ -13,6 +13,67 @@
 #       OS (assume linux)
 #       ISA
 
+
+# the next hundred lines are all just parsing command line args :D
+
+get_wheel_flag=0 # --get-wheel # if you just want the wheel
+uv_flag=0 # --uv #if you want to install with uv
+offline_flag=0 # --offline #if you want to do an offline install (download wheel and quit)
+dryrun_flag=0 # --dryrun #if you want to dryrun
+force_reinstall_flag=0 # --force-reinstall # if you want to force reinstallation
+flash_attn_version='2.7.4.post1' # -v|--flash-attn-version VERSION #version to install
+verbose_flag=0 # --verbose #to set +x
+
+#colon after for an arg
+lkey="uv offline dryrun force-reinstall flash-attn-version: verbose get-wheel"
+rkey=$(echo $lkey | perl -pe 's/-//g')
+
+LONG_FLAGS=""
+for lf in $(echo "$lkey $rkey" | perl -pe 's/\s+/\n/g'| sort -u)
+do
+    LONG_FLAGS="$LONG_FLAGS -l $lf"
+done
+
+FLAGS="v:"
+
+OPTS=`getopt -o $FLAGS $LONG_FLAGS -- "$@"`
+
+if [[ $? -ne 0 ]] ; then
+    echo "${cmd}: (Error) Invalid or unsupported options from 'getopt'" >&2
+    exit 1
+fi
+
+trueargs=$(echo "$OPTS" | perl -pe "s/^\s+//; s/(--\S+)\s+'/\${1}=/g; s/'//g; s/--\s*$//")
+abort=no
+
+eval set -- "$OPTS"
+
+while true
+do
+    case "$1" in
+    -v|--flash-attn-version) flash_attn_version=$2; shift 2;;
+    --uv) uv_flag=1; shift;;
+    --dryrun) dryrun_flag=1; shift;;
+    --offline) offline_flag=1; shift;;
+    --verbose) verbose_flag=1; shift;;
+    --get-wheel) get_wheel_flag=1; shift;;
+    --force-reinstall) force_reinstall_flag=1; shift;;
+        --) shift; break;;
+        *) echo "DEBUG: 1=${1:-}"; echo "DEBUG: 2=${2:-}"; abort=yes; break;;
+    esac
+done
+
+if [[ $abort = yes ]] ; then
+    echo "${cmd}: (Error) Invalid command line arguments : $cmdargs" >&2
+    ((errcnt += 1))
+fi
+
+quiet="-q" #by default pip and wget is silenced
+if [[ $verbose_flag -eq 1 ]]; then
+	set -x
+	quiet="" #unsilence pip and wget when running in verbose mode
+fi
+
 if command -v python3 &> /dev/null; then 
 	PYTHON_CMD="python3" 
 else 
@@ -83,40 +144,48 @@ fi
 
 #check for internet
 # if no, just run offline mode
-wget -q --spider http://google.com
+wget $quiet --spider http://google.com
 if [ ! $? -eq 0 ]; then
         printf "Warning! no internet detected (unable to ping 'http://google.com')\nRunning in offline mode instead\n"
-        OFFLINE=1
+        offline_flag=1
 fi
-
-# Hardcoded - I can manually bump with new releases
-flash_attn_version="2.7.4.post1"
 
 # An example wheel: flash_attn-2.7.0.post1+cu12torch2.5cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
 flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
 printf " =>       $flash_attn_wheel\n"
 
 url="https://github.com/Dao-AILab/flash-attention/releases/download/v${flash_attn_version}/$flash_attn_wheel"
-if [[ "$DRYRUN" -eq "1" ]] ; then
+if [[ "$DRYRUN" -eq "1" ]]  || [[ $dryrun_flag -eq "1" ]] ; then
         printf "Dryrun! Printing commands instead:\n #        wget $url\n #        pip install $flash_attn_wheel\n"
-elif [[ "$OFFLINE" -eq 1 ]]; then
+elif [[ "$OFFLINE" -eq 1 ]] || [[ "$offline_flag" -eq 1 ]]; then
         printf "Offline! To install flash-attn, please run 'wget ...' on a system with internet and copy it over and then run 'pip install':\n"
         printf "          wget $url\n"
         printf "          scp $flash_attn_wheel ...\n"
         printf "          pip install $flash_attn_wheel\n"
 else
 	printf "\nDownloading $flash_attn_wheel...\n"
-        wget -q $url 2>&1 > /dev/null ||{
+        wget $quiet $url 2>&1 > /dev/null ||{
                 printf "url not found! Maybe '$flash_attn_wheel' is not a supported configuration :(\nexiting...\n"
                 exit 0
         }
 
+	if [[ $get_wheel_flag -eq 1 ]]; then
+		printf "Wheel downloaded to $PWD/$flash_attn_wheel\n"
+		exit 0
+	fi
+
 	prefix=""
-	if [[ ! $UV == "" ]]; then
+	#first case is legacy, 2nd case is command line arg
+	if [[ ! $UV == "" ]] || [[ $uv_flag -eq "1" ]] ; then
 		prefix="uv"
 	fi
 
-        $prefix pip install -q --no-cache-dir --no-deps $flash_attn_wheel
+	reinstall=""
+	if [[ $force_reinstall_flag -eq 1 ]]; then
+		reinstall="--force-reinstall"
+	fi
+
+        $prefix pip install $quiet $reinstall --no-cache-dir --no-deps $flash_attn_wheel
         rm $flash_attn_wheel
 
         pip list | grep flash_attn > /dev/null  2>get-flash-attn.err

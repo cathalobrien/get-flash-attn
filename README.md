@@ -14,10 +14,24 @@ source /path/to/venv/bin/activate #activate your venv/conda/uv env
 ./get-flash-attn
 ```
 
+## Command line args
+The following command line args are supported
+```bash
+-v|--flash-attn-version $version # Which version of flash attention to install. defaults to '2.7.4.post1'
+--offline # Prints instructions to install on an airgapped system e.g. MN5
+--dryrun # Dryrun. prints commands instead of running them
+--get-wheel # Downloads the wheel to your cwd and quits
+--uv # Install into a UV env
+--force-reinstall # Forces pip to reinstall flash-attn
+--verbose # Verbose mode. all commands will be printed before execution, and wget and pip are not silenced
+```
+For legacy reasons, the env vars 'UV', 'OFFLINE' and 'DRYRUN' can be set to '1' to set their relevant flags.
+
 ### UV
 To install into a uv env, run the script as shown
 ```bash
-UV=1 ./get-flash-attn
+./get-flash-attn --uv
+#UV=1 ./get-flash-attn #legacy
 ```
 
 ### Offline installs
