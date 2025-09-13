@@ -98,11 +98,6 @@ printf " +        cu$cuda_version\n"
 torch_version=`echo ${torch_config#*TORCH_VERSION=} | awk -F'.' '{print $1 "." $2 }'`
 printf " +        torch v$torch_version\n"
 
-if [ `echo $torch_version'>'2.7 | bc -l` -eq 1 ]; then
-        printf "detected torch version '$torch_version' newer then latest known wheel '2.7'\nWill try get a v2.7 wheel\n"
-        torch_version="2.7"
-fi
-
 # cut off everything up to and inc "ABI="
 # then read the first char
 ABI=`echo ${torch_config#*ABI=} | awk '{print substr ($0, 0, 1)}'`  # 0 or 1
@@ -165,42 +160,17 @@ fi
 printf " +        source '$wheel_source'\n"
 fi
 
-
-local_path=""
 if [[ $wheel_source == "naco" ]]; then
-#example wheel paths for x86 and aarch64
-#/perm/naco/wheelhouse/x86/flash-attention/flash-2.7.4.post1/python3.11/torch2.7.0/flash_attn-2.7.4.post1-cp311-cp311-linux_x86_64.whl
-#/perm/naco/wheelhouse/aarch64/flash-attention/flash-2.7.4/python3.12/cuda12.8/torch2.6.0/flash_attn-2.7.4-cp312-cp312-linux_aarch64.whl
 
-url=""
-
-if [[ $isa == "x86_64" ]]; then
-	local_path="/perm/naco/wheelhouse/x86/flash-attention/flash-${flash_attn_version}/python3.${python_version}/torch${torch_version}.0/"
-elif [[ $isa == "aarch64" ]]; then
-	#cuda 12.8 is the cuda module the wheel was built against, not the cuda version torch is linked to
-	local_path="/perm/naco/wheelhouse/aarch64/flash-attention/flash-${flash_attn_version}/python3.${python_version}/cuda12.8/torch${torch_version}.0/"
-else
-	printf "Unknown isa '$isa'. exiting...\n"
-	exit 0
-fi
-
-# check if we are on atos if running with the source naco
-if [[ ! -d /perm/naco ]]; then
-	printf "Error! The path '/perm/naco' not found\nThe source 'naco' only works on Atos currently. exiting..."
-	exit 0
-fi
-
-flash_attn_wheel=flash_attn-${flash_attn_version}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl
-cp $local_path/${flash_attn_wheel} .||{
-                printf "wheel not found! Maybe '$flash_attn_wheel' is not a supported configuration :(\nexiting...\n"
-                exit 0
-        }
+	#Hardcode abi false, I dont have wheels with ABI true yet
+	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abiFALSE-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
+	url="https://github.com/cathalobrien/get-flash-attn/releases/download/v0.1-alpha/$flash_attn_wheel"
 
 elif  [[ $wheel_source == "tridao" ]]; then
 
-# An example wheel: flash_attn-2.7.0.post1+cu12torch2.5cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
-url="https://github.com/Dao-AILab/flash-attention/releases/download/v${flash_attn_version}/$flash_attn_wheel"
-flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
+	flash_attn_wheel="flash_attn-${flash_attn_version}+cu${cuda_version}torch${torch_version}cxx11abi${ABI}-cp3${python_version}-cp3${python_version}-${os}_${isa}.whl"
+	url="https://github.com/Dao-AILab/flash-attention/releases/download/v${flash_attn_version}/$flash_attn_wheel"
+
 else
 printf "Unkown wheel source '$wheel_source'. Exiting...\n"
 exit 0
@@ -210,19 +180,15 @@ printf " =>       $flash_attn_wheel\n"
 
 if [[ "$DRYRUN" -eq "1" ]]  || [[ $dryrun_flag -eq "1" ]] ; then
         printf "\nDryrun! Printing commands instead:\n"
-	if [[ ! $url == "" ]]; then
-		printf "         wget $url\n"
-	fi
-	printf "         pip install ${local_path}$flash_attn_wheel\n"
+	printf "         wget $url\n"
+	printf "         pip install $flash_attn_wheel\n"
 	exit 0
 fi
 
 if [[ "$OFFLINE" -eq 1 ]] || [[ "$offline_flag" -eq 1 ]]; then
         printf "\nOffline! To install flash-attn, please run 'wget ...' on a system with internet and copy it over and then run 'pip install':\n"
-	if [[ ! $url == "" ]]; then
-        	printf "          wget $url\n"
-	fi
-        printf "          scp ${local_path}$flash_attn_wheel <remote>:\n"
+        printf "          wget $url\n"
+        printf "          scp $flash_attn_wheel <remote>:\n"
 	printf "	  ssh <remote>\n"
         printf "          pip install $flash_attn_wheel\n"
 	exit 0
