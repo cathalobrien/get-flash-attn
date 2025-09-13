@@ -13,7 +13,7 @@ set -ex
 
 flash_version=2.8.3
 python3_minor_version=12
-torch_version=2.8.0
+torch_version=2.8
 cuda_version=12.8
 cxx11_abi="FALSE"
 
@@ -56,11 +56,11 @@ pip install --no-cache-dir wheel setuptools packaging ninja numpy
 #older torch versions arent built against cu 126
 torch_minor_version=`echo  $torch_version | cut -d. -f2`
 if [[ "$torch_minor_version" -lt "7"  ]]; then
-pip install  torch==$torch_version --index-url https://download.pytorch.org/whl/cu126
+pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu126
 elif  [[ "$torch_minor_version" -lt "8"  ]]; then
-pip install  torch==$torch_version --index-url https://download.pytorch.org/whl/cu128
+pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu128
 else
-pip install  torch==$torch_version --index-url https://download.pytorch.org/whl/cu129
+pip install  torch==${torch_version}.0 --index-url https://download.pytorch.org/whl/cu129
 fi
 
 if [[ ! -d flash-attention ]]; then
@@ -80,8 +80,9 @@ python setup.py clean
 python setup.py bdist_wheel -vvvvv --dist-dir=dist
 
 mkdir -p $wheel_dir
+cuda_minor_version=${cuda_version%%.*}
 #credit to https://github.com/Dao-AILab/flash-attention/blob/e980f0f6e15ae3a7bc2a29e5610e8a9bfe25f7a6/.github/workflows/_build.yml#L178
-tmpname=cu${cuda_version}torch${torch_version}cxx11abi${cxx11_abi}
+tmpname=cu${cuda_minor_version}torch${torch_version}cxx11abi${cxx11_abi}
 wheel_name=$(ls dist/*whl | xargs -n 1 basename | sed "s/-/+$tmpname-/2")
 cp  dist/*whl $wheel_dir/$wheel_name
 echo "Wheel saved at $wheel_dir/$wheel_name"

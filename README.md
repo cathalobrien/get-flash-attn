@@ -72,3 +72,5 @@ grep -r "mv dist" outputs/ | awk '{print $4}' | uniq | sort
 * modify built wheels names to include cuda, torch and ABI information in build
 * add an option to build with ABI true/false
 * add wheel coverage matrix
+* build ABI true
+* store cuda minor version in naco wheels
