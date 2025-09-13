@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if [[ $1 == "" ]]; then
+	echo "Error. usage: ./find-unique-local-wheels <local-wheel-dir>. Exiting..."
+	exit 0
+fi
+
+local_dir=$1
+
+if [[ ! -d $local_dir ]]; then
+	echo "Error. Can't find a local dir '$local_dir'. Exiting..."
+	exit 0
+fi
+
+repo="cathalobrien/get-flash-attn"
+cd $local_dir
+curl -s -L "https://api.github.com/repos/${repo}/releases" | jq -r ".[].assets[].name" > remote_wheels.txt
+ls *.whl > local_wheels.txt
+
+grep -Fxv -f remote_wheels.txt local_wheels.txt 
+
+rm remote_wheels.txt 
+rm local_wheels.txt
