@@ -37,3 +37,16 @@ scp ...whl system_without_internet:
 # On the system without internet, run:
 pip install ...whl
 ```
+
+## Building wheels
+The repo includes slurm scripts to build x86 and aarch64 wheels.
+
+To see which configurations have begun:
+```
+grep -r "wheel_dir" outputs/ | awk '{print $2}' | uniq | sort
+```
+
+To see which build configurations were successful, and the wheels locations:
+```
+grep -r "mv dist" outputs/ | awk '{print $4}' | uniq | sort
+```
