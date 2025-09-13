@@ -13,21 +13,21 @@
 
 set -ex
 
-flash_version=2.7.4
-python3_minor_version=11
-torch_version=2.6
+flash_version=2.7.4.post1
+python3_minor_version=12
+torch_version=2.8
 cuda_version=12.6
 cxx11_abi="FALSE"
 
 wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/
 echo "wheel_dir=$wheel_dir"
 
-if [[ $python3_minor_version == "11" ]]; then
-module load python3/3.11.10-01
-else
-echo "unsupported python version  $python3_minor_version. exiting..."
-exit 0
-fi
+#create python env
+source slurm/utils.sh
+#builds python 3.$minor and activates a venv under TMPDIR
+build_python_from_conda $python3_minor_version
+
+
 module load gcc/12.2.0
 if [[ $cuda_version == "12.6" ]]; then
         module load  cuda/$cuda_version
@@ -39,11 +39,7 @@ export CXX=g++ CC=gcc
 
 cd $TMPDIR
 
-if [[ ! -d  $TMPDIR/venv ]]; then
-python3 -m venv $TMPDIR/venv
-fi
-source $TMPDIR/venv/bin/activate
-pip install --no-cache-dir wheel setuptools packaging ninja torch==${torch_version}.0 numpy
+pip install --upgrade --no-cache-dir wheel setuptools packaging ninja torch==${torch_version}.0 numpy
 
 if [[ ! -d flash-attention ]]; then
 git clone git@github.com:Dao-AILab/flash-attention.git

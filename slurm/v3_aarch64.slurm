@@ -25,12 +25,10 @@ cxx11_abi="FALSE"
 wheel_dir=/ec/res4/hpcperm/naco/aifs/get-flash-attn/wheels/
 echo "wheel_dir=$wheel_dir"
 
-if [[ $python3_minor_version == "12" ]]; then
-module load  python3/3.12.9-01
-else
-echo "unsupported python version  $python3_minor_version. exiting..."
-exit 0
-fi
+#create python env
+source slurm/utils.sh
+#builds python 3.$minor and activates a venv under TMPDIR
+build_python_from_conda $python3_minor_version
 
 module load gcc/11.4.1
 
@@ -51,11 +49,7 @@ fi
 
 cd $TMPDIR
 
-if [[ ! -d  $TMPDIR/venv ]]; then
-python3 -m venv $TMPDIR/venv
-fi
-source $TMPDIR/venv/bin/activate
-pip install --no-cache-dir wheel setuptools packaging ninja numpy
+pip install --upgrade --no-cache-dir wheel setuptools packaging ninja numpy
 
 #older torch versions arent built against cu 126
 torch_minor_version=`echo  $torch_version | cut -d. -f2`
