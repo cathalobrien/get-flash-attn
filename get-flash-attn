@@ -174,7 +174,7 @@ fi
 #if a version was not given with '-v <version>'
 #try to find the newest match for your given env
 if [[ ${flash_attn_version} == "" ]]; then
-	wheels=`curl -s -L "https://api.github.com/repos/${repo}/releases" | jq -r ".[].assets[].name" | grep  "torch${torch_version}cxx11abi${ABI}-cp3${python_version}"`
+	wheels=`curl -s -L "https://api.github.com/repos/${repo}/releases" | jq -r ".[].assets[].name" | grep  "torch${torch_version}cxx11abi${ABI}-cp3${python_version}" | grep "$isa"`
 	num_wheels=$(echo "$wheels" | wc -l)
 	if [[ $num_wheels -eq 0 ]]; then
 		printf "\nError no matching wheel found for your environment\n.run './get-flash-attn -l | ./etc/show_wheel_availability.awk' to show available wheels. Exiting..."
