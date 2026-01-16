@@ -254,7 +254,7 @@ $prefix pip install $quiet $reinstall --no-cache-dir --no-deps $flash_attn_wheel
 rm $flash_attn_wheel
 
 # [_-] because the module name is not consistent
-pip list | grep flash[_-]attn > /dev/null  2>get-flash-attn.err
+$prefix pip list | grep flash[_-]attn > /dev/null  2>get-flash-attn.err
 install_status=$?
 if [[ $install_status == "0" ]]; then
 	printf "Install succeeded\n"
