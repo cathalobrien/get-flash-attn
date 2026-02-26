@@ -90,8 +90,15 @@ torch_config=`$PYTHON_CMD -c "import torch; print(torch.__config__.show())"` ||{
         exit 1
 }
 
+#check if your torch supports cuda
+if [[ ! $torch_config =~ "CUDA_VERSION" ]]; then
+  printf "Your torch install does not support cuda. Please reinstall a version of torch which supports cuda to use flash attention.\n"
+  exit 1
+fi
+
 # cut off everything up to and inc "CUDA_VERSION="      -> 12.4,CUDNN_VERSION=...
 # takes up to the first '.'                             -> 12
+
 cuda_version=`echo ${torch_config#*CUDA_VERSION=} | awk -F'.' '{print $1}'`
 printf " +        cu$cuda_version\n"
 
